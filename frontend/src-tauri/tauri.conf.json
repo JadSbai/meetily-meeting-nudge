@@ -10,6 +10,7 @@
         "beforeBuildCommand": "pnpm build"
     },
     "app": {
+        "withGlobalTauri": true,
         "windows": [
             {
                 "title": "meetily",
@@ -74,6 +75,18 @@
                             ]
                         }
                     ]
+                },
+                {
+                    "identifier": "meeting-nudge",
+                    "description": "Meeting-detection nudge overlay window",
+                    "windows": [
+                        "meeting-nudge"
+                    ],
+                    "permissions": [
+                        "core:default",
+                        "core:window:default",
+                        "core:event:default"
+                    ]
                 }
             ]
         }
@@ -88,7 +101,7 @@
             "app",
             "dmg"
         ],
-        "createUpdaterArtifacts": true,
+        "createUpdaterArtifacts": false,
         "icon": [
             "icons/icon.png",
             "icons/app_icon.icns",

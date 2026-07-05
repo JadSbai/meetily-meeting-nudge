@@ -41,6 +41,7 @@ pub mod audio;
 pub mod config;
 pub mod console_utils;
 pub mod database;
+pub mod meeting_nudge;
 pub mod notifications;
 pub mod ollama;
 pub mod onboarding;
@@ -416,6 +417,8 @@ pub fn run() {
             None::<notifications::manager::NotificationManager<tauri::Wry>>,
         )) as NotificationManagerState<tauri::Wry>)
         .manage(audio::init_system_audio_state())
+        .manage(audio::meeting_detector::init_meeting_detector_state())
+        .manage(meeting_nudge::NudgeState::default())
         .manage(summary::summary_engine::ModelManagerState(Arc::new(tokio::sync::Mutex::new(None))))
         .setup(|_app| {
             log::info!("Application setup complete");
@@ -499,6 +502,29 @@ pub fn run() {
             })
             .expect("Failed to initialize database");
 
+            // Start meeting auto-detection → recording nudge (macOS).
+            // Watches for a meeting app grabbing the mic and pops the overlay.
+            {
+                use audio::meeting_detector::{
+                    new_meeting_callback, MeetingDetector, MeetingDetectorState, MeetingEvent,
+                };
+                let app_for_meeting = _app.handle().clone();
+                let callback = new_meeting_callback(move |event| match event {
+                    MeetingEvent::Started { platform, .. } => {
+                        meeting_nudge::handle_started(&app_for_meeting, platform.label().to_string())
+                    }
+                    MeetingEvent::Ended => meeting_nudge::handle_ended(&app_for_meeting),
+                });
+                let mut detector = MeetingDetector::new();
+                detector.start(callback);
+                // Park the detector in managed state so it outlives setup().
+                let state = _app.state::<MeetingDetectorState>();
+                if let Ok(mut guard) = state.lock() {
+                    *guard = Some(detector);
+                }
+                log::info!("Meeting auto-detection started");
+            }
+
             // Initialize bundled templates directory for dynamic template discovery
             log::info!("Initializing bundled templates directory...");
             if let Ok(resource_path) = _app.handle().path().resource_dir() {
@@ -527,6 +553,10 @@ pub fn run() {
             start_recording,
             stop_recording,
             is_recording,
+            meeting_nudge::nudge_start_recording,
+            meeting_nudge::nudge_dismiss,
+            meeting_nudge::nudge_get_enabled,
+            meeting_nudge::nudge_set_enabled,
             get_transcription_status,
             read_audio_file,
             save_transcript,

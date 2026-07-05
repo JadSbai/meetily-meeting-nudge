@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Meeting detected</title>
+    <style>
+      :root {
+        --card-bg: rgba(255, 255, 255, 0.92);
+        --card-border: rgba(0, 0, 0, 0.08);
+        --text: #1a1a1a;
+        --text-dim: #6b6b6b;
+        --primary: #e5484d;
+        --primary-text: #ffffff;
+        --ghost-bg: rgba(0, 0, 0, 0.05);
+        --ghost-text: #333;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --card-bg: rgba(32, 32, 34, 0.94);
+          --card-border: rgba(255, 255, 255, 0.10);
+          --text: #f2f2f2;
+          --text-dim: #a0a0a0;
+          --ghost-bg: rgba(255, 255, 255, 0.08);
+          --ghost-text: #e8e8e8;
+        }
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body {
+        background: transparent;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        -webkit-user-select: none;
+        user-select: none;
+        cursor: default;
+      }
+      .card {
+        margin: 6px;
+        height: calc(100% - 12px);
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 14px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 14px 16px;
+        gap: 12px;
+      }
+      .row { display: flex; align-items: center; gap: 10px; }
+      .dot {
+        width: 9px; height: 9px; border-radius: 50%;
+        background: var(--primary);
+        box-shadow: 0 0 0 0 rgba(229, 72, 77, 0.6);
+        animation: pulse 1.8s infinite;
+        flex: 0 0 auto;
+      }
+      @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(229, 72, 77, 0.5); }
+        70% { box-shadow: 0 0 0 8px rgba(229, 72, 77, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(229, 72, 77, 0); }
+      }
+      .msg { font-size: 13.5px; font-weight: 600; color: var(--text); line-height: 1.3; }
+      .msg .platform { color: var(--primary); }
+      .sub { font-size: 11.5px; color: var(--text-dim); margin-top: 1px; }
+      .actions { display: flex; gap: 8px; justify-content: flex-end; }
+      button {
+        font-family: inherit;
+        font-size: 12.5px;
+        font-weight: 600;
+        border: none;
+        border-radius: 9px;
+        padding: 7px 14px;
+        cursor: pointer;
+        transition: transform 0.05s ease, opacity 0.15s ease;
+      }
+      button:active { transform: scale(0.97); }
+      .btn-primary { background: var(--primary); color: var(--primary-text); }
+      .btn-primary:hover { opacity: 0.9; }
+      .btn-ghost { background: var(--ghost-bg); color: var(--ghost-text); }
+      .btn-ghost:hover { opacity: 0.8; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="row">
+        <span class="dot"></span>
+        <div>
+          <div class="msg">Looks like you're in <span class="platform" id="platform">a meeting</span>.</div>
+          <div class="sub">Want Meetily to record &amp; transcribe it?</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-ghost" id="ignore">Ignore</button>
+        <button class="btn-primary" id="start">Start recording</button>
+      </div>
+    </div>
+    <script src="meeting-nudge.js"></script>
+  </body>
+</html>
