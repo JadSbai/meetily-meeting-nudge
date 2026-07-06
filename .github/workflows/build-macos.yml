@@ -50,6 +50,22 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Select stable Xcode (avoid Xcode 26.x clang_rt.osx link break)
+        shell: bash
+        run: |
+          echo "Available Xcodes:"; ls -d /Applications/Xcode_*.app 2>/dev/null || true
+          XC=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XC" ]; then
+            XC=$(ls -d /Applications/Xcode_1*.app 2>/dev/null | sort -V | tail -1)
+          fi
+          if [ -z "$XC" ]; then
+            echo "::error::No stable Xcode (<26) found on runner"; exit 1
+          fi
+          echo "Selecting $XC"
+          sudo xcode-select -s "$XC/Contents/Developer"
+          xcodebuild -version
+          clang --version
+
       - name: Get version from tauri.conf.json
         id: get-version
         shell: bash
