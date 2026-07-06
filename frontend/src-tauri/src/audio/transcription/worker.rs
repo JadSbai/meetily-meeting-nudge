@@ -228,7 +228,9 @@ pub fn start_transcription_task<R: Runtime>(
                                             audio_end_time,
                                             duration: chunk_duration,
                                             // Wave B attribution: "me" (mic) or "them" (system)
-                                            speaker: chunk_speaker,
+                                            // Clone so `chunk_speaker` stays available for the
+                                            // Wave C diarization buffer call below.
+                                            speaker: chunk_speaker.clone(),
                                         };
 
                                         if let Err(e) = app_clone.emit("transcript-update", &update)
