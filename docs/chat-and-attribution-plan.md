@@ -121,8 +121,19 @@ Split "them" into distinct voices + capture a voice embedding per cluster.
   speaker-active turns → embedding per turn → **online clustering** (cosine threshold) →
   `them:S1/S2…` + store the embedding per (meeting,label). Reuse Parakeet's model-dir infra
   (`app_data_dir/models`, `parakeet_engine/commands.rs`) for the ONNX download.
-- Recommended: try `pyannote-rs` first (lightest, matches intent); fall back to
-  `native-pyannote-rs` if `ort` won't unify. Resolve the moment Wave B is runtime-verified.
+- ✅ **RESOLVED (dependency spike):** `pyannote-rs = "0.3"` (→ 0.3.4) resolves with `ort
+  v2.0.0-rc.10` appearing **once** (no conflict), adding only 5 small crates (pyannote-rs,
+  knf-rs, knf-rs-sys, eyre, indenter). **Use `pyannote-rs`.** No Burn fallback needed.
+- **Integration design (decided):** compute the speaker EMBEDDING per "them" (system) VAD
+  segment live (pyannote embedding model on the segment samples — the worker already holds
+  `chunk.data`), and STORE it per segment (new `transcripts.speaker_embedding` BLOB/JSON,
+  nullable). Then a **post-recording clustering pass** (cosine, online agglomerative) over a
+  meeting's stored embeddings assigns `them:S1/S2…`. This avoids needing a separate
+  system-only audio save (embeddings are captured at transcription time). Degrade-safe:
+  no embeddings → single "them".
+- **Prereq (do first): energy arbitration** (roadmap item 2) so a mislabeled echo turn
+  doesn't pollute a speaker cluster. Compute per-segment RMS in the worker (has `chunk.data`),
+  store it, and use it as the echo-pair tiebreak + a diarization input filter.
 - Output: system segments sub-labeled + `speaker_embedding` per (meeting, label).
 - Degrade-safe: diarization off/unavailable → all system = single "them" (Wave B already
   gives this). So Wave C is strictly additive on top of a working me/them.
