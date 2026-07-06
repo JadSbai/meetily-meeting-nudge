@@ -121,7 +121,9 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: ". -> target"
-          key: macos-latest-aarch64-apple-darwin
+          # Bumped to bust the cache poisoned by the Xcode 26.5 runs (cidre's
+          # cached build script emitted a clang/21 link path that no longer exists).
+          key: macos15-xcode16-aarch64-apple-darwin
 
       - name: Install frontend dependencies
         run: |
