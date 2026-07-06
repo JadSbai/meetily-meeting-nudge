@@ -38,6 +38,7 @@ pub(crate) use perf_trace;
 pub mod analytics;
 pub mod api;
 pub mod audio;
+pub mod chat;
 pub mod config;
 pub mod console_utils;
 pub mod database;
@@ -704,6 +705,10 @@ pub fn run() {
             summary::commands::api_save_meeting_detected_summary_language,
             summary::commands::api_detect_transcript_summary_language,
             summary::commands::api_cancel_summary,
+            // Chat with your meetings
+            chat::commands::chat_send,
+            chat::commands::chat_history,
+            chat::commands::chat_clear,
             // Template commands
             summary::template_commands::api_list_templates,
             summary::template_commands::api_get_template_details,
