@@ -40,6 +40,8 @@ pub mod playback_monitor; // NEW: Playback device detection for BT warnings
 // Transcription module (provider abstraction, engine management, worker pool)
 pub mod transcription;
 
+pub mod diarize;  // NEW (Wave C): post-recording speaker diarization of the "them" stream
+
 // Shared utilities for import and retranscription
 pub(crate) mod common;
 

@@ -991,6 +991,15 @@ pub async fn api_save_transcript<R: Runtime>(
                 "Successfully saved transcript and created meeting with id: {}",
                 meeting_id
             );
+
+            // Wave C: cluster the recording's buffered voice embeddings into distinct
+            // speakers and refine "them" → "them:S1"… in place. Best-effort — a
+            // diarization failure must never fail a save (the flat me/them stands).
+            match crate::audio::diarize::finalize_meeting(pool, &meeting_id).await {
+                Ok(n) => log_info!("Diarization refined {} transcript segments for {}", n, meeting_id),
+                Err(e) => log_error!("Diarization finalize failed for {} (non-fatal): {}", meeting_id, e),
+            }
+
             Ok(serde_json::json!({
                 "status": "success",
                 "message": "Transcript saved successfully",

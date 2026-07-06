@@ -103,8 +103,12 @@ futures-util = "0.3"
 silero_rs = { git = "https://github.com/emotechlab/silero-rs", rev = "26a6460", package = "silero" }
 
 # Parakeet (ONNX-based fast transcription) dependencies
-ort = { version = "2.0.0-rc.10" }  # ONNX Runtime for Parakeet models
+ort = { version = "2.0.0-rc.10", features = ["ndarray"] }  # ONNX Runtime for Parakeet models (ndarray feature shared with pyannote-rs)
 thiserror = "2.0.16"                # Error handling for Parakeet
+
+# Speaker diarization (Wave C) — ONNX voice embeddings via the same `ort` build.
+# Unifies to ort 2.0.0-rc.10 (verified: single ort in the graph, no native link conflict).
+pyannote-rs = "0.3"
 
 # Async
 tokio = { version = "1.32.0", features = ["full", "tracing"] }

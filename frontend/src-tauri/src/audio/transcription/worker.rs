@@ -148,6 +148,10 @@ pub fn start_transcription_task<R: Runtime>(
                             // Wave B: capture the speaker label BEFORE `chunk` is moved into
                             // transcribe_chunk_with_provider below (needed when building the update).
                             let chunk_speaker = chunk.device_type.speaker_label().to_string();
+                            // Wave C: keep a copy of this VAD segment's samples so we can compute
+                            // a voice embedding for diarization AFTER transcription (the chunk is
+                            // moved into the transcriber). Bounded to one VAD segment, so cheap.
+                            let diarize_samples: (Vec<f32>, u32) = (chunk.data.clone(), chunk.sample_rate);
 
                             // Transcribe with provider-agnostic approach
                             match transcribe_chunk_with_provider(
@@ -234,6 +238,18 @@ pub fn start_transcription_task<R: Runtime>(
                                                 worker_id, e
                                             );
                                         }
+
+                                        // Wave C: buffer this segment's voice embedding for
+                                        // post-recording diarization. Keyed by audio_start_time so
+                                        // `finalize_meeting` can match it back to the saved row.
+                                        // Best-effort + off the UI path (after emit); no-ops when
+                                        // the embedding model isn't downloaded yet.
+                                        crate::audio::diarize::record_segment(
+                                            audio_start_time,
+                                            &chunk_speaker,
+                                            &diarize_samples.0,
+                                            diarize_samples.1,
+                                        );
                                         // PERFORMANCE: Removed verbose logging of every emission
                                     } else if !transcript.trim().is_empty() && should_log_this_chunk
                                     {

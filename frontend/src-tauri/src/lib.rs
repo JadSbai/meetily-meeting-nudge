@@ -475,6 +475,21 @@ pub fn run() {
                 }
             });
 
+            // Wave C: point diarization at <app_data>/models/diarize and background-download
+            // the voice-embedding model (~29 MB) so post-recording speaker clustering works.
+            // Best-effort: a failure just means the first recording gets a single "them".
+            {
+                use tauri::Manager;
+                if let Ok(app_data) = _app.handle().path().app_data_dir() {
+                    audio::diarize::embed::set_model_dir(app_data.join("models").join("diarize"));
+                    tauri::async_runtime::spawn(async {
+                        audio::diarize::embed::ensure_model_downloaded().await;
+                    });
+                } else {
+                    log::warn!("Could not resolve app_data_dir for diarization model");
+                }
+            }
+
             // Initialize ModelManager for summary engine (async, non-blocking)
             let app_handle_for_model_manager = _app.handle().clone();
             tauri::async_runtime::spawn(async move {
