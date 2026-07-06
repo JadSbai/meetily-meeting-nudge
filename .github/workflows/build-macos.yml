@@ -37,7 +37,10 @@ env:
 jobs:
   build-macos:
     name: Build macOS (Apple Silicon)
-    runs-on: macos-latest
+    # Pinned to macos-15 (stable Apple-Silicon image, Xcode 16.x). macos-latest
+    # rolled to Xcode 26.5 whose clang lib layout breaks cidre's `-lclang_rt.osx`
+    # link flag (ld: library 'clang_rt.osx' not found).
+    runs-on: macos-15
     permissions:
       contents: write
 
