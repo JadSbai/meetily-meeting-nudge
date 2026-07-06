@@ -188,6 +188,11 @@ pub struct TranscriptSegment {
     pub audio_end_time: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub duration: Option<f64>,
+    // Wave B attribution: stable speaker label ("me" = mic, "them" = system).
+    // `serde(default)` keeps deserialization of pre-attribution payloads working
+    // (frontend JSON without a `speaker` field parses to an empty string).
+    #[serde(default)]
+    pub speaker: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

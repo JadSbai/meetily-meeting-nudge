@@ -14,6 +14,17 @@ pub enum DeviceType {
     System,
 }
 
+impl DeviceType {
+    /// Stable speaker label for transcript attribution (Wave B).
+    /// Microphone = you ("me"); System = everyone else ("them").
+    pub fn speaker_label(&self) -> &'static str {
+        match self {
+            DeviceType::Microphone => "me",
+            DeviceType::System => "them",
+        }
+    }
+}
+
 /// Audio chunk with metadata for processing
 #[derive(Debug, Clone)]
 pub struct AudioChunk {
@@ -445,5 +456,17 @@ impl Clone for RecordingStats {
             total_duration: self.total_duration,
             last_activity: self.last_activity,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn speaker_label_maps_source_to_attribution() {
+        // Wave B contract: mic = you ("me"), system = everyone else ("them").
+        assert_eq!(DeviceType::Microphone.speaker_label(), "me");
+        assert_eq!(DeviceType::System.speaker_label(), "them");
     }
 }
