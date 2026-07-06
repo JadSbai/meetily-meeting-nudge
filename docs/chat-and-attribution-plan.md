@@ -108,10 +108,21 @@ Split "them" into distinct voices + capture a voice embedding per cluster.
   The dead `stt.rs` is a useful DESIGN TEMPLATE: it intended pyannote **ONNX** models —
   `get_or_download_model(Segmentation|Embedding)` → `EmbeddingExtractor` → `EmbeddingManager`
   clustering, `speaker_embedding: Vec<f32>` per segment.
-- **Build plan:** a new `audio/diarize/` module using `ort`: download the pyannote
-  segmentation ONNX + a speaker-embedding ONNX (wespeaker/pyannote) → per system-segment
-  embedding → online clustering (cosine threshold) → `them:S1/S2…`. Reuse Parakeet's `ort`
-  session pattern + model-download infra (`get_or_download_model` equivalent).
+- **Crate choice (researched):** the dead `stt.rs` API (`pyannote::{embedding::EmbeddingExtractor,
+  identify::EmbeddingManager}`) is the **`pyannote-rs` crate** (thewh1teagle) — ONNX via `ort`,
+  models `segmentation-3.0` + `wespeaker-voxceleb-resnet34-LM`. Options, by integration risk:
+  1. **`pyannote-rs`** — reuses the app's `ort`; matches `stt.rs` verbatim. ⚠ MUST verify its
+     `ort` pin unifies with the app's `ort 2.0.0-rc.10` (ort is a `-sys` crate; two versions =
+     native link conflict). **Decision gate at Wave C start:** `cargo tree -i ort` after adding.
+  2. **`native-pyannote-rs`** (RustedBytes) — pure Rust via **Burn, no `ort`** → zero version
+     conflict, heavier deps. The safe fallback if (1) won't unify.
+  3. `speakrs` — `ort 2.0.0-rc.12` (≠ ours) → would force an app-wide ort bump; avoid unless (1)/(2) fail.
+- **Build plan:** new `audio/diarize/` module: run segmentation on the "them" (system) audio →
+  speaker-active turns → embedding per turn → **online clustering** (cosine threshold) →
+  `them:S1/S2…` + store the embedding per (meeting,label). Reuse Parakeet's model-dir infra
+  (`app_data_dir/models`, `parakeet_engine/commands.rs`) for the ONNX download.
+- Recommended: try `pyannote-rs` first (lightest, matches intent); fall back to
+  `native-pyannote-rs` if `ort` won't unify. Resolve the moment Wave B is runtime-verified.
 - Output: system segments sub-labeled + `speaker_embedding` per (meeting, label).
 - Degrade-safe: diarization off/unavailable → all system = single "them" (Wave B already
   gives this). So Wave C is strictly additive on top of a working me/them.
