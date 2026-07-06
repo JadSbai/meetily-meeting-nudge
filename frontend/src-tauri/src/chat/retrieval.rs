@@ -246,6 +246,7 @@ pub async fn load_corpus(pool: &SqlitePool) -> Result<Vec<Meeting>, String> {
 
         // Keep segments in chronological order (query may sort NULLs first).
         meeting.segments.sort_by(|a, b| a.order.partial_cmp(&b.order).unwrap_or(std::cmp::Ordering::Equal));
+        dedup_echoes(&mut meeting.segments);
         meetings.push(meeting);
     }
     Ok(meetings)
@@ -374,4 +375,61 @@ fn snippet(text: &str, max: usize) -> String {
     } else {
         text.to_string()
     }
+}
+
+/// Remove acoustic echo: cross-speaker segments overlapping in time with
+/// near-identical text — the mic picking up the phone/speaker (or vice-versa),
+/// so the same utterance is transcribed on both streams. Keeps the longer
+/// (cleaner) transcription; drops the degraded echo. Word-Jaccard >= 0.5 within
+/// a 2s window. Validated on real recordings (chat-harness/echo_dedup_proto.py).
+/// Non-destructive: only cleans what chat/diarization consume, not stored rows.
+fn dedup_echoes(segments: &mut Vec<Segment>) {
+    const WINDOW: f64 = 2.0;
+    const SIM: f64 = 0.5;
+    let word_set = |s: &str| -> std::collections::HashSet<String> {
+        s.to_lowercase()
+            .split(|c: char| !c.is_ascii_alphanumeric())
+            .filter(|w| !w.is_empty())
+            .map(|w| w.to_string())
+            .collect()
+    };
+    let sets: Vec<std::collections::HashSet<String>> =
+        segments.iter().map(|s| word_set(&s.text)).collect();
+    let mut drop = vec![false; segments.len()];
+    for i in 0..segments.len() {
+        if drop[i] {
+            continue;
+        }
+        for j in (i + 1)..segments.len() {
+            if drop[j] {
+                continue;
+            }
+            if segments[j].order - segments[i].order > WINDOW {
+                break; // sorted by start → no further candidates for i
+            }
+            if segments[i].speaker == segments[j].speaker {
+                continue;
+            }
+            let (a, b) = (&sets[i], &sets[j]);
+            if a.is_empty() || b.is_empty() {
+                continue;
+            }
+            let inter = a.intersection(b).count() as f64;
+            let uni = a.union(b).count() as f64;
+            if uni > 0.0 && inter / uni >= SIM {
+                // Drop the shorter (degraded echo), keep the longer transcription.
+                let loser = if segments[i].text.len() >= segments[j].text.len() { j } else { i };
+                drop[loser] = true;
+                if loser == i {
+                    break;
+                }
+            }
+        }
+    }
+    let mut idx = 0;
+    segments.retain(|_| {
+        let keep = !drop[idx];
+        idx += 1;
+        keep
+    });
 }
