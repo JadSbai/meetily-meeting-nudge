@@ -504,25 +504,32 @@ pub fn run() {
 
             // Start meeting auto-detection → recording nudge (macOS).
             // Watches for a meeting app grabbing the mic and pops the overlay.
+            // MUST run inside the async runtime: setup() executes on the main
+            // thread outside any tokio context, and the detector spawns tokio
+            // tasks — calling detector.start() directly here panics/aborts.
             {
                 use audio::meeting_detector::{
                     new_meeting_callback, MeetingDetector, MeetingDetectorState, MeetingEvent,
                 };
                 let app_for_meeting = _app.handle().clone();
-                let callback = new_meeting_callback(move |event| match event {
-                    MeetingEvent::Started { platform, .. } => {
-                        meeting_nudge::handle_started(&app_for_meeting, platform.label().to_string())
+                let app_for_state = _app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    let callback = new_meeting_callback(move |event| match event {
+                        MeetingEvent::Started { platform, .. } => meeting_nudge::handle_started(
+                            &app_for_meeting,
+                            platform.label().to_string(),
+                        ),
+                        MeetingEvent::Ended => meeting_nudge::handle_ended(&app_for_meeting),
+                    });
+                    let mut detector = MeetingDetector::new();
+                    detector.start(callback);
+                    // Park the detector in managed state so it outlives setup().
+                    let state = app_for_state.state::<MeetingDetectorState>();
+                    if let Ok(mut guard) = state.lock() {
+                        *guard = Some(detector);
                     }
-                    MeetingEvent::Ended => meeting_nudge::handle_ended(&app_for_meeting),
+                    log::info!("Meeting auto-detection started");
                 });
-                let mut detector = MeetingDetector::new();
-                detector.start(callback);
-                // Park the detector in managed state so it outlives setup().
-                let state = _app.state::<MeetingDetectorState>();
-                if let Ok(mut guard) = state.lock() {
-                    *guard = Some(detector);
-                }
-                log::info!("Meeting auto-detection started");
             }
 
             // Initialize bundled templates directory for dynamic template discovery
